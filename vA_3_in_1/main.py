@@ -10,6 +10,7 @@ from torch_geometric.utils import to_undirected, remove_self_loops, add_self_loo
 from torch_scatter import scatter
 import copy
 
+
 from logger import Logger, SimpleLogger
 from dataset import load_dataset
 from data_utils import normalize, gen_normalized_adjs, evaluate, eval_acc, eval_rocauc, eval_f1, to_sparse_tensor, \
@@ -80,6 +81,7 @@ print(f"num nodes {n} | num classes {c} | num node feats {d}")
 ### Load model ###
 model = parse_method(args, n, c, d, device)
 
+
 if args.dataset in ('yelp-chi', 'deezer-europe', 'twitch-e', 'fb100', 'ogbn-proteins', 'yelp'):
     criterion = nn.BCEWithLogitsLoss()
 else:
@@ -121,6 +123,9 @@ for run in range(args.runs):
     assert dataset.graph['tr_edge_index'].shape[1] !=  dataset.graph['edge_index'].shape[1]
 
     model.reset_parameters()
+    min_value = 0.0
+    max_value = 1.0
+    model.weight_matrix.data = torch.clamp(model.weight_matrix.data, min_value, max_value)
     optimizer = torch.optim.Adam(model.parameters(),weight_decay=args.weight_decay, lr=args.lr)
     best_val = float('-inf')
     

@@ -12,6 +12,8 @@ from torch_geometric.utils import remove_self_loops, add_self_loops, degree
 from conv import *
 
 
+
+
 # Implementation of PMLP_GCN, which can become MLP or GCN depending on whether using message passing
 class PMLP_GCN(nn.Module): 
     def __init__(self, in_channels, hidden_channels, out_channels, args, num_node):
@@ -29,6 +31,14 @@ class PMLP_GCN(nn.Module):
         self.fcs.append(nn.Linear(in_channels, hidden_channels, bias=self.ff_bias))
         for _ in range(self.num_layers - 2): self.fcs.append(nn.Linear(hidden_channels, hidden_channels, bias=self.ff_bias)) #1s
         self.fcs.append(nn.Linear(hidden_channels, out_channels, bias=self.ff_bias)) #1
+
+        
+        
+        
+        self.weight_matrix = nn.Parameter(torch.randn(self.num_node, self.num_node))
+        # #self.afcs.append(nn.Linear(in_channels, hidden_channels, bias=self.ff_bias))
+        # for _ in range(self.num_layers - 1): self.afcs.append(nn.Linear(hidden_channels, hidden_channels, bias=self.ff_bias)) #1s
+        # self.afcs.append(nn.Linear(out_channels, out_channels, bias=self.ff_bias)) #1
         self.reset_parameters()
     
 
@@ -40,13 +50,13 @@ class PMLP_GCN(nn.Module):
     def forward(self, x, edge_index, use_conv=True):
         for i in range(self.num_layers - 1):
             x = x @ self.fcs[i].weight.t() 
-            if use_conv: x = gcn_conv(x, edge_index)  # Optionally replace 'gcn_conv' with other conv functions in conv.py
+            if use_conv: x = gcn_conv(x, edge_index,self.weight_matrix)  # Optionally replace 'gcn_conv' with other conv functions in conv.py
             if self.ff_bias: x = x + self.fcs[i].bias
             x = self.activation(self.bns(x))
             x = F.dropout(x, p=self.dropout, training=self.training)
 
         x = x @ self.fcs[-1].weight.t() 
-        if use_conv: x = gcn_conv(x, edge_index)
+        if use_conv: x = gcn_conv(x, edge_index,self.weight_matrix)
         if self.ff_bias: x = x + self.fcs[-1].bias
         return x
 

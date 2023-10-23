@@ -8,10 +8,13 @@ from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import num_nodes, to_dense_adj
 import numpy as np
 from torch_geometric.utils import remove_self_loops, add_self_loops, degree
-import math
+import math, copy
 
 
-def gcn_conv(h, edge_index):
+def gcn_conv(h, edge_index,weight_mat):
+
+
+
     N = h.size(0)
     edge_index, _ = remove_self_loops(edge_index)
     edge_index, _ = add_self_loops(edge_index, num_nodes=N)
@@ -25,10 +28,17 @@ def gcn_conv(h, edge_index):
     deg_dst.masked_fill_(deg_dst == float('inf'), 0)
     edge_weight = deg_src * deg_dst
 
-    a = torch.sparse_coo_tensor(edge_index, edge_weight, torch.Size([N, N])).t()
-    h_prime = a @ h 
-    return h_prime
 
+    #a = torch.sparse.FloatTensor(edge_index, edge_weight, torch.Size([N, N])).t()
+    #a = torch.sparse_coo_tensor(edge_index, edge_weight, torch.Size([N, N])).t()
+    a = torch.zeros(N, N)
+    a[edge_index[0], edge_index[1]] = edge_weight
+    
+    weight_mat = a*torch.sigmoid(weight_mat) #torch.sparse.mm(a, weight_mat)
+    #print('WM = ',torch.count_nonzero(a))
+    #print('WM = ',torch.count_nonzero(weight_mat==0.0))
+    h_prime = weight_mat @ h 
+    return h_prime
 
 def conv_noloop(h, edge_index):
     N = h.size(0)
