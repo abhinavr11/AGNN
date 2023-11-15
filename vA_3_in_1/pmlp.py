@@ -36,10 +36,17 @@ class PMLP_GCN(nn.Module):
         for mlp in self.fcs: 
             nn.init.xavier_uniform_(mlp.weight, gain=1.414)
             nn.init.zeros_(mlp.bias)
-
+    def pooling(self, x, size):
+        kernel_size = x.shape[1] - size + 1
+        pool = nn.MaxPool1d(kernel_size , stride=1)
+        assert pool(x).shape[1] == size, "INcorrect kernel size"
+        return pool(x)
     def forward(self, x, edge_index, use_conv=True):
         for i in range(self.num_layers - 1):
+            x_prev = x.detach().clone()
             x = x @ self.fcs[i].weight.t() 
+            # skip conneciton
+            x.data += (0.1)*self.pooling(x_prev, x.shape[1]) 
             if use_conv: x = gcn_conv(x, edge_index)  # Optionally replace 'gcn_conv' with other conv functions in conv.py
             if self.ff_bias: x = x + self.fcs[i].bias
             x = self.activation(self.bns(x))
